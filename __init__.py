@@ -74,10 +74,10 @@ from bpy.types import (
 
 
 @orientation_helper(axis_forward='Y', axis_up='Z')
-class ImportSTL(Operator, ImportHelper):
-    bl_idname = "import_mesh.stl"
-    bl_label = "Import STL"
-    bl_description = "Load STL triangle mesh data"
+class ImportNamedSTL(Operator, ImportHelper):
+    bl_idname = "import_named_mesh.stl"
+    bl_label = "Import Named STL"
+    bl_description = "Load STL triangle mesh data with group names"
     bl_options = {'UNDO'}
 
     filename_ext = ".stl"
@@ -204,9 +204,9 @@ class STL_PT_import_geometry(bpy.types.Panel):
 
 
 @orientation_helper(axis_forward='Y', axis_up='Z')
-class ExportSTL(Operator, ExportHelper):
-    bl_idname = "export_mesh.stl"
-    bl_label = "Export STL"
+class ExportNamedSTL(Operator, ExportHelper):
+    bl_idname = "export_named_mesh.stl"
+    bl_label = "Export named STL"
     bl_description = """Save STL triangle mesh data"""
 
     filename_ext = ".stl"
@@ -409,18 +409,18 @@ class STL_PT_export_geometry(bpy.types.Panel):
 
 
 def menu_import(self, context):
-    self.layout.operator(ImportSTL.bl_idname, text="Stl (.stl)")
+    self.layout.operator(ImportNamedSTL.bl_idname, text="Stl (.stl)")
 
 
 def menu_export(self, context):
-    self.layout.operator(ExportSTL.bl_idname, text="Stl (.stl)")
+    self.layout.operator(ExportNamedSTL.bl_idname, text="Stl (.stl)")
 
 
 classes = (
-    ImportSTL,
+    ImportNamedSTL,
     STL_PT_import_transform,
     STL_PT_import_geometry,
-    ExportSTL,
+    ExportNamedSTL,
     STL_PT_export_main,
     STL_PT_export_include,
     STL_PT_export_transform,
