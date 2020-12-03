@@ -109,6 +109,11 @@ class ImportNamedSTL(Operator, ImportHelper):
         description="Use (import) facet normals (note that this will still give flat shading)",
         default=False,
     )
+    ascii_solids: BoolProperty(
+        name="Multi solids (ASCII only)",
+        description="Multi solids. No effect if not ASCII",
+        default=True,
+    )
 
     def execute(self, context):
         import os
@@ -141,9 +146,16 @@ class ImportNamedSTL(Operator, ImportHelper):
 
         for path in paths:
             objName = bpy.path.display_name(os.path.basename(path))
-            tris, tri_nors, pts = stl_utils.read_stl(path)
-            tri_nors = tri_nors if self.use_facet_normal else None
-            blender_utils.create_and_link_mesh(objName, tris, tri_nors, pts, global_matrix)
+            if not self.ascii_solids:
+                tris, tri_nors, pts = stl_utils.read_stl(path)
+                tri_nors = tri_nors if self.use_facet_normal else None
+                blender_utils.create_and_link_mesh(objName, tris, tri_nors, pts, global_matrix)
+            else:
+                dataDict = stl_utils.read_stl_solid(path)
+                for key in dataDict.keys():
+                    objName = str(key)
+                    tris, pts = dataDict[key]
+                    blender_utils.create_and_link_mesh(objName, tris, pts)
 
         return {'FINISHED'}
 
@@ -230,8 +242,12 @@ class ExportNamedSTL(Operator, ExportHelper):
     ascii: BoolProperty(
         name="Ascii",
         description="Save the file in ASCII file format",
-        default=False,
+        default=True,
     )
+    ascii_solids: BoolProperty(
+            name="Multi solids (ASCII only)",
+            description="Multi solids. No effect if not ASCII",
+            default=True)
     use_mesh_modifiers: BoolProperty(
         name="Apply Modifiers",
         description="Apply the modifiers before saving",
@@ -287,7 +303,28 @@ class ExportNamedSTL(Operator, ExportHelper):
         ).to_4x4() @ Matrix.Scale(global_scale, 4)
 
         if self.batch_mode == 'OFF':
-            faces = itertools.chain.from_iterable(
+            if self.ascii and self.ascii_solids:
+                fh = open(self.filepath, 'w')
+                for ob in data_seq:
+
+                    bpy.ops.object.editmode_toggle()
+                    bpy.ops.mesh.select_all(action='TOGGLE')
+                    bpy.ops.mesh.normals_make_consistent(inside=False)
+                    bpy.ops.mesh.select_all(action='TOGGLE')
+                    bpy.ops.object.editmode_toggle()
+
+                    faces = blender_utils.faces_from_mesh(ob,
+                                                          global_matrix,
+                                                          self.use_mesh_modifiers)
+                    # normals = blender_utils.normals_from_mesh(ob,
+                                                              # global_matrix,
+                                                              # self.use_mesh_modifiers)
+
+                    # stl_utils.append_stl_solid(fh, ob.name, faces, list(normals))
+                    stl_utils.append_stl_solid(fh, ob.name, faces)
+
+            else:
+                faces = itertools.chain.from_iterable(
                     blender_utils.faces_from_mesh(ob, global_matrix, self.use_mesh_modifiers)
                     for ob in data_seq)
 
@@ -295,10 +332,28 @@ class ExportNamedSTL(Operator, ExportHelper):
         elif self.batch_mode == 'OBJECT':
             prefix = os.path.splitext(self.filepath)[0]
             keywords_temp = keywords.copy()
-            for ob in data_seq:
-                faces = blender_utils.faces_from_mesh(ob, global_matrix, self.use_mesh_modifiers)
-                keywords_temp["filepath"] = prefix + bpy.path.clean_name(ob.name) + ".stl"
-                stl_utils.write_stl(faces=faces, **keywords_temp)
+            if self.ascii and self.ascii_solids:
+                for ob in data_seq:
+                    bpy.ops.object.editmode_toggle()
+                    bpy.ops.mesh.select_all(action='TOGGLE')
+                    bpy.ops.mesh.normals_make_consistent(inside=False)
+                    bpy.ops.mesh.select_all(action='TOGGLE')
+                    bpy.ops.object.editmode_toggle()
+
+                    faces = blender_utils.faces_from_mesh(ob,
+                                                          global_matrix,
+                                                          self.use_mesh_modifiers)
+                    # normals = blender_utils.normals_from_mesh(ob,
+                                                              # global_matrix,
+                                                              # self.use_mesh_modifiers)
+
+                    # stl_utils.append_stl_solid(fh, ob.name, faces, list(normals))
+                    stl_utils.append_stl_solid(fh, ob.name, faces)
+            else:
+                for ob in data_seq:
+                    faces = blender_utils.faces_from_mesh(ob, global_matrix, self.use_mesh_modifiers)
+                    keywords_temp["filepath"] = prefix + bpy.path.clean_name(ob.name) + ".stl"
+                    stl_utils.write_stl(faces=faces, **keywords_temp)
 
         return {'FINISHED'}
 

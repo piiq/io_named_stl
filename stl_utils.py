@@ -28,6 +28,29 @@ blender --python stl_utils.py -- file1.stl file2.stl file3.stl ...
 
 # TODO: endien
 
+import mmap
+import contextlib
+
+
+@contextlib.contextmanager
+def mmap_file(filename):
+    '''
+    Context manager over the data of an mmap'ed file (Read ONLY).
+
+
+    Example:
+
+    with mmap_file(filename) as m:
+        m.read()
+        print m[10:50]
+    '''
+    with open(filename, 'rb') as file:
+        # check http://bugs.python.org/issue8046 to have mmap context
+        # manager fixed in python
+        mem_map = mmap.mmap(file.fileno(), 0, access=mmap.ACCESS_READ)
+        yield mem_map
+        mem_map.close()
+
 
 class ListDict(dict):
     """
@@ -166,6 +189,39 @@ def _ascii_read(data):
             yield curr_nor, [tuple(map(float, l_item.split()[1:])) for l_item in (l, data.readline(), data.readline())]
 
 
+def _ascii_solid_read(data, solid=''):
+    head = data.readline()
+    solid = head.split()[1]
+
+    while True:
+        # strip facet normal // or end
+        # and strip extra facet data such as 'color'
+        if data.readline().split()[0] == bytes(b'color'):
+            data.readline()
+
+        # strip outer loup, in case of ending, break the loop
+        if not data.readline():
+            break
+
+        yield [tuple(map(float, data.readline().split()[1:])) for _ in range(3)]
+
+        # strip facet normalend and outerloop end
+        data.readline()
+        data.readline()
+        # if next line is an endsolid, stop
+        # else reverse one line and continue
+        currentPos = data.tell()
+        line = data.readline()
+        if line:
+            if line.split()[0] == bytes(b'endsolid'):
+                break
+            else:
+                data.seek(currentPos)
+                continue
+        else:
+            break
+
+
 def _binary_write(filepath, faces):
     import struct
     import itertools
@@ -197,6 +253,19 @@ def _binary_write(filepath, faces):
         fw(struct.pack('<80sI', _header_version().encode('ascii'), nb))
 
 
+def getAsciiSolids(data):
+    solids = []
+    while True:
+        line = data.readline()
+        if not line:
+            break
+        if line.split()[0] == bytes(b'solid'):
+            solids.append(line.split()[1])
+    data.seek(0)
+    print(solids)
+    return solids
+
+
 def _ascii_write(filepath, faces):
     from mathutils.geometry import normal
 
@@ -215,7 +284,19 @@ def _ascii_write(filepath, faces):
         fw('endsolid %s\n' % header)
 
 
-def write_stl(filepath="", faces=(), ascii=False):
+# def append_stl_solid(fileobject, solidname, faces, normals):
+def append_stl_solid(fileobject, solidname, faces):
+    fileobject.write('solid %s\n' % solidname)
+    for i, face in enumerate(faces):
+        # fileobject.write('facet normal %f %f %f\nouter loop\n' % tuple(normals[i]))
+        for vert in face:
+            fileobject.write('vertex %f %f %f\n' % vert[:])
+        fileobject.write('endloop\nendfacet\n')
+
+    fileobject.write('endsolid %s\n' % solidname)
+
+
+def write_stl(filepath="", faces=(), ascii=True, ascii_solids=True):
     """
     Write a stl file from faces,
 
@@ -279,6 +360,31 @@ def read_stl(filepath):
     print('Import finished in %.4f sec.' % (time.process_time() - start_time))
 
     return tris, tri_nors, pts.list
+
+
+def read_stl_solid(filename):
+    with mmap_file(filename) as data:
+        # check for ascii or binary
+        is_ascii = _is_ascii_file(data)
+
+        if not is_ascii:
+            return False
+
+        gen = _ascii_solid_read
+
+        dataDict = {}
+
+        for solid in getAsciiSolids(data):
+            tris, pts = [], ListDict()
+            for pt in gen(data):
+                # Add the triangle and the point.
+                # If the point is allready in the list of points, the
+                # index returned by pts.add() will be the one from the
+                # first equal point inserted.
+                tris.append([pts.add(p) for p in pt])
+            dataDict[solid] = (tris, pts.list)
+
+    return dataDict
 
 
 if __name__ == '__main__':

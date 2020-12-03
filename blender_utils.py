@@ -63,6 +63,21 @@ def create_and_link_mesh(name, faces, face_nors, points, global_matrix):
     obj.select_set(True)
 
 
+# def normals_from_mesh(ob, apply_modifier=False, triangulate=True):
+#     import bpy
+#     try:
+#         mesh = ob.to_mesh(bpy.context.scene, apply_modifier)
+#     except RuntimeError:
+#         raise StopIteration
+
+#     mesh.transform(ob.matrix_world)
+
+#     for face in mesh.tessfaces:
+#         if len(face.vertices[:]) == 4:
+#             yield face.normal
+#         yield face.normal
+
+
 def faces_from_mesh(ob, global_matrix, use_mesh_modifiers=False):
     """
     From an object, return a generator over a list of faces.
