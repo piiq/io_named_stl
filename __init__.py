@@ -19,16 +19,18 @@
 # <pep8-80 compliant>
 
 bl_info = {
-    "name": "STL format",
-    "author": "Guillaume Bouchard (Guillaum)",
-    "version": (1, 1, 3),
-    "blender": (2, 81, 6),
-    "location": "File > Import-Export",
-    "description": "Import-Export STL files",
-    "wiki_url": "https://docs.blender.org/manual/en/dev/addons/"
-                "import_export/io_mesh_stl.html",
-    "support": 'OFFICIAL',
-    "category": "Import-Export",
+    "name": "Named ASCII STL format",
+    "author": "Guillaume Bouchard (Guillaum), Niklas Wikstrom, Theodore Aptekarev",
+    "version": (1, 0),
+    "blender": (2, 8, 2),
+    "api": 35622,
+    "location": "File > Import-Export > Named Stl",
+    "description": "Named ASCII STL file Import-Export",
+    "warning": "",
+    "wiki_url": "",
+    "tracker_url": "",
+    "support": 'COMMUNITY',
+    "category": "Import-Export"
 }
 
 
