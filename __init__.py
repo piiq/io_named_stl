@@ -23,7 +23,6 @@ bl_info = {
     "author": "Guillaume Bouchard (Guillaum), Niklas Wikstrom, Theodore Aptekarev",
     "version": (1, 0),
     "blender": (2, 8, 2),
-    "api": 35622,
     "location": "File > Import-Export > Named Stl",
     "description": "Named ASCII STL file Import-Export",
     "warning": "",
